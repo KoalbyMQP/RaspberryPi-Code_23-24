@@ -30,7 +30,7 @@ class Robot():
 
             self.client = RemoteAPIClient()
             self.sim = self.client.require('sim')
-            self.motorMovePositionScriptHandle = self.sim.getScript(self.sim.scripttype_childscript, self.sim.getObject("./Chest_respondable"))
+            self.childScriptHandle = self.sim.getScript(self.sim.scripttype_childscript, self.sim.getObject("./Chest_respondable"))
             self.motors = self.sim_motors_init()
 
         self.imu = IMU(self.is_real, sim=self.sim)
@@ -145,11 +145,20 @@ class Robot():
             motor.move(position)
 
     def moveAllToTarget(self):
-        # joint = self.locate(self.motors[19])
-        # self.sim.setObjectPosition(self.trackSphere,(joint[0][3]/1000,joint[2][3]/-1000,joint[1][3]/1000),self.sim.getObject("./Chest_respondable"))
-        self.sim.callScriptFunction('setJointAngles', self.motorMovePositionScriptHandle,[motor.handle for motor in self.motors], [motor.target[0] for motor in self.motors])
-        # for motor in self.motors:
-        #     motor.move(motor.target)
+        if self.is_real:
+            for motor in self.motors:
+                motor.move(motor.target)
+        else:
+            self.sim.callScriptFunction('setJointAngles', self.childScriptHandle,[motor.handle for motor in self.motors], [motor.target[0] for motor in self.motors])
+
+    def updateAllMotorAngles(self):
+        if self.is_real:
+            for motor in self.motors:
+                motor.get_position()
+        else:
+            motorAngles = self.sim.callScriptFunction('getJointAngles', self.childScriptHandle,[motor.handle for motor in self.motors])
+            for motorNum, motor in enumerate(self.motors):
+                motor.theta = motorAngles[motorNum]
 
     def initHomePos(self):
         if self.is_real:

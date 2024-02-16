@@ -52,7 +52,7 @@ def calcLimbCoM(motors, links):
         motor = motors[i]
         link = links[i]
         Slist.append(motor.twist)
-        thetaList.append(motor.get_position())
+        thetaList.append(motor.theta)
         linkCoM = mr.FKinSpace(link.M, np.transpose(Slist), thetaList)
         weightX += linkCoM[0,3] * link.mass
         weightY += linkCoM[1,3] * link.mass
@@ -66,12 +66,12 @@ def calcLegCoM(robot, motors, links):
     weightY = 0
     weightZ = 0
     Slist = [robot.motors[11].twist, robot.motors[13].twist, robot.motors[10].twist, robot.motors[12].twist, robot.motors[14].twist]
-    thetaList = [robot.motors[11].get_position(), robot.motors[13].get_position(), robot.motors[10].get_position(), robot.motors[12].get_position(), robot.motors[14].get_position()]
+    thetaList = [robot.motors[11].theta, robot.motors[13].theta, robot.motors[10].theta, robot.motors[12].theta, robot.motors[14].theta]
     for i in range(len(motors)):
         motor = motors[i]
         link = links[i]
         Slist.append(motor.twist)
-        thetaList.append(motor.get_position())
+        thetaList.append(motor.theta)
         linkCoM = mr.FKinSpace(link.M, np.transpose(Slist), thetaList)
         weightX += linkCoM[0,3] * link.mass
         weightY += linkCoM[1,3] * link.mass
@@ -82,8 +82,8 @@ def calcLegCoM(robot, motors, links):
 def calcLegChainIK(robot, T, rightToLeft):
     Slist = Config.rightToLeftFootTwists[0]
     M = Config.rightToLeftFootTwists[1]
-    thetaList = [robot.motors[19].get_position(), robot.motors[18].get_position(), robot.motors[17].get_position(), robot.motors[16].get_position(), robot.motors[15].get_position(), 
-             robot.motors[20].get_position(), robot.motors[21].get_position(), robot.motors[22].get_position(), robot.motors[23].get_position(), robot.motors[24].get_position()]
+    thetaList = [robot.motors[19].theta, robot.motors[18].theta, robot.motors[17].theta, robot.motors[16].theta, robot.motors[15].theta, 
+             robot.motors[20].theta, robot.motors[21].theta, robot.motors[22].theta, robot.motors[23].theta, robot.motors[24].theta]
     print(thetaList)
     thetaList = [math.radians(-20), math.radians(-40), math.radians(20), 0, 0, 
                 0, 0, math.radians(-20), math.radians(40), math.radians(20)]
