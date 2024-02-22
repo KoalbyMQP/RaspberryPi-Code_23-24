@@ -27,6 +27,7 @@ while time.time() - simStartTime < 5:
 while True:
     startTime = time.time()
     while time.time() - startTime < squatTime*2:
+        # loopTime = time.time()
         robot.IMUBalance(0,0)
         point = tjTime.getQuinticPositions(time.time() - startTime)
         robot.motors[17].target = (point[0], 'P')

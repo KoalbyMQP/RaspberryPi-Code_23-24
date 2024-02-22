@@ -24,7 +24,7 @@ class Motor():
             self.simMovePID = PID(self.pidGains[0], self.pidGains[1], self.pidGains[2])
 
         self.target = (0, 'P')
-        self.theta = None
+        self.theta = 0
 
     def get_position(self):
         if self.is_real:

@@ -115,7 +115,7 @@ class Robot():
             print("Beginning to stream", motorConfig[3])
             handle = self.sim.getObject("/" + motorConfig[3])
             motor = Motor(False, motorConfig[0], motorConfig[3], motorConfig[6], motorConfig[7], pidGains=motorConfig[5], sim=self.sim, handle=handle)
-            motor.theta = motor.get_position()
+            motor.theta = motor.theta
             motor.name = motorConfig[3]
             motors.append(motor)
         return motors
@@ -154,9 +154,18 @@ class Robot():
     def updateAllMotorAngles(self):
         if self.is_real:
             for motor in self.motors:
-                motor.get_position()
+                motor.theta
         else:
             motorAngles = self.sim.callScriptFunction('getJointAngles', self.childScriptHandle,[motor.handle for motor in self.motors])
+            for motorNum, motor in enumerate(self.motors):
+                motor.theta = motorAngles[motorNum]
+
+    def update(self, updateMoveBool, updateAngleBool, updateTrackSphere):
+        motorLoc = self.locate(self.motors[19])
+        returnVals = self.sim.callScriptFunction('update', self.childScriptHandle, (updateMoveBool, [motor.handle for motor in self.motors]), (updateAngleBool, [motor.target for motor in self.motors]), (updateTrackSphere, [motorLoc[0][3]/1000,-motorLoc[2][3]/1000,motorLoc[1][3]/1000]))
+        # returnVals = self.sim.callScriptFunction('update', self.childScriptHandle, (updateMoveBool, [motor.handle for motor in self.motors]), (updateAngleBool, [motor.target for motor in self.motors]), (updateTrackSphere, [self.balancePoint[0]/1000,-self.balancePoint[2]/1000,self.balancePoint[1]/1000]))
+        if updateAngleBool:
+            motorAngles = returnVals
             for motorNum, motor in enumerate(self.motors):
                 motor.theta = motorAngles[motorNum]
 
@@ -227,16 +236,21 @@ class Robot():
         slist = []
         thetaList = []
         M = motor.M
+        # print(motor.name, motor.twist)
         slist.append(motor.twist)
-        thetaList.append(motor.get_position())
+        thetaList.append(motor.theta)
         next = self.chain[motor.name]
+        # hi = time.time()
         while next != "base":
+            # print(next.name, next.twist)
             slist.append(next.twist)
-            thetaList.append(next.get_position())
-            next = self.chain[next.name]            
+            thetaList.append(next.theta)
+            next = self.chain[next.name] 
+            
+            # print("WHYWHYWHYW")         
+        # print("HELP", time.time() - hi)
         slist.reverse()
         thetaList.reverse()
-        # print(thetaList)
         location = mr.FKinSpace(M,np.transpose(slist),thetaList)
         return location
     
@@ -254,11 +268,11 @@ class Robot():
             motor = ankleMotors[i]
             M = Ms[i]
             slist.append(motor.twist)
-            thetaList.append(motor.get_position())
+            thetaList.append(motor.theta)
             next = self.chain[motor.name]
             while next != "base":
                 slist.append(next.twist)
-                thetaList.append(next.get_position())
+                thetaList.append(next.theta)
                 next = self.chain[next.name]         
             slist.reverse()
             thetaList.reverse()
@@ -267,8 +281,10 @@ class Robot():
         return locations
     
     def updateBalancePoint(self):
+        # hi = time.time()
         rightAnkle = self.locate(self.motors[Config.Joints.Right_Ankle_Joint.value])
         leftAnkle = self.locate(self.motors[Config.Joints.Left_Ankle_Joint.value])
+        # print("YO", time.time() - hi)
         rightAnkleToSole = np.array([[1,0,0,-24.18],[0,1,0,-35],[0,0,1,29.14],[0,0,0,1]])
         leftAnkleToSole = np.array([[1,0,0,24.18],[0,1,0,-35],[0,0,1,29.14],[0,0,0,1]])
         rightSole = np.matmul(rightAnkle,rightAnkleToSole)
@@ -317,7 +333,7 @@ class Robot():
         self.motors[13].target = (-newTargetZ, 'P')
         self.motors[10].target = (-newTargetX, 'P')
 
-    def VelBalance(self, balancePoint):
+    def bpBalance(self, balancePoint):
         balanceError = balancePoint - self.CoM
         Xerror = balanceError[0]
         Zerror = balanceError[2]
@@ -325,8 +341,8 @@ class Robot():
         self.VelPIDZ.setError(Zerror)
         newTargetX = self.VelPIDX.calculate()
         newTargetZ = self.VelPIDZ.calculate()
-        self.motors[13].target = (newTargetX, 'V')
-        self.motors[10].target = (-newTargetZ, 'V')
+        self.motors[13].target = (newTargetX, 'P')
+        self.motors[10].target = (-newTargetZ, 'P')
         return balanceError
 
     def balanceAngle(self):
