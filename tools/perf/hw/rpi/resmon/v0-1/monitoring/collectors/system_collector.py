@@ -10,11 +10,9 @@ class SystemCollector:
         
         try:
             decoder = subprocess.check_output(['vcgencmd', 'codec_enabled', 'H264']).decode()
-            vulkan = subprocess.check_output(['vulkaninfo'], stderr=subprocess.DEVNULL).decode()
         except:
             decoder = "unavailable"
-            vulkan = "unavailable"
-            
+    
         return {
             'disk_read': disk.read_bytes,
             'disk_write': disk.write_bytes,
@@ -23,5 +21,4 @@ class SystemCollector:
             'process_count': len(psutil.pids()),
             'context_switches': psutil.cpu_stats().ctx_switches,
             'hw_decoder': decoder.strip(),
-            'vulkan_support': 'available' if 'Vulkan Instance Version' in vulkan else 'unavailable'
         }

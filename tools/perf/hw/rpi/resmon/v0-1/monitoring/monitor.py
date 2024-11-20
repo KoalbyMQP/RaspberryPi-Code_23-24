@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, List
 import pandas as pd
+import os
 
 from .collectors.cpu_collector import CPUCollector
 from .collectors.memory_collector import MemoryCollector
@@ -89,8 +90,16 @@ class Monitor:
                     break
                     
                 time.sleep(self.settings.get('sampling_interval'))
+            except KeyboardInterrupt:
+                self.should_stop = True
+                break
             except Exception as e:
                 Logger.logger.error(f"Error in {phase} monitoring: {str(e)}")
+                if phase == "runtime":
+                    self.should_stop = True
+                    break
+                else:
+                    continue
     
     def _start_depthai(self):
         try:
