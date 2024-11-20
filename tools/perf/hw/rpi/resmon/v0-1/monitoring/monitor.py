@@ -101,6 +101,13 @@ class Monitor:
             self.settings.validate_paths()
             
             venv_activate = str(venv_path / 'bin' / 'activate')
+            if not Path(venv_activate).exists():
+                venv_path = Path(str(venv_path).replace('/oak-d-lite/', '/oak-d-lite/vdepthai/'))
+                venv_activate = str(venv_path / 'bin' / 'activate')
+                
+            if not Path(venv_activate).exists():
+                raise FileNotFoundError(f"Virtual environment activation script not found at {venv_activate}")
+            
             activate_cmd = f'source {venv_activate} && '
             
             cmd = f"{activate_cmd} cd {depthai_path} && python3 depthai_demo.py"

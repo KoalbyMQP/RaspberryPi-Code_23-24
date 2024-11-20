@@ -6,38 +6,26 @@ from pathlib import Path
 
 class Settings:
     def __init__(self):
-        desktop_path = Path.home() / 'Desktop'
-        
-        self.project_root = desktop_path / 'RaspberryPi-Code_24-25'
-        self.depthai_path = self.project_root / 'test/io/inputs/camera/oak-d-lite/vdepthai/depthai'
-        self.venv_path = self.depthai_path.parent.parent  # vdepthai folder
-        
-        self.config = {
-            'pre_run_duration': 30,
-            'post_run_duration': 30,
-            'sampling_interval': 1,
-            'depthai_path': self.depthai_path,
-            'venv_path': self.venv_path,
-            'log_base_dir': self.project_root / 'tools/perf/hw/rpi/resmon/v0-1/logs'
+        self.settings = {
+            'depthai_path': Path('/home/finley/Desktop/RaspberryPi-Code_24-25/test/io/inputs/camera/oak-d-lite/vdepthai/depthai'),
+            'venv_path': Path('/home/finley/Desktop/RaspberryPi-Code_24-25/test/io/inputs/camera/oak-d-lite/vdepthai'),
+            'sampling_interval': 0.1  # seconds
         }
-    
-    def update_from_cli(self, cli_args: Dict[str, Any]):
-        for key, value in cli_args.items():
-            if value is not None:
-                self.config[key] = value
-    
-    def get(self, key: str) -> Any:
-        return self.config.get(key)
 
-    def validate_paths(self) -> bool:
+    def get(self, key: str):
+        return self.settings.get(key)
+
+    def validate_paths(self):
         """Validate that all required paths exist"""
-        required_paths = [
-            (self.project_root, "Project root"),
-            (self.depthai_path, "DepthAI path"),
-            (self.venv_path, "Virtual environment path")
-        ]
-        
-        for path, name in required_paths:
-            if not path.exists():
-                raise FileNotFoundError(f"{name} not found at: {path}")
-        return True
+        if not self.settings['depthai_path'].exists():
+            raise FileNotFoundError(f"DepthAI path does not exist: {self.settings['depthai_path']}")
+            
+        venv_activate = self.settings['venv_path'] / 'bin' / 'activate'
+        if not venv_activate.exists():
+            # Try alternate path
+            alt_venv_path = Path(str(self.settings['venv_path']).replace('/oak-d-lite/', '/oak-d-lite/vdepthai/'))
+            alt_venv_activate = alt_venv_path / 'bin' / 'activate'
+            if alt_venv_activate.exists():
+                self.settings['venv_path'] = alt_venv_path
+            else:
+                raise FileNotFoundError(f"Virtual environment not found at {venv_activate} or {alt_venv_activate}")
