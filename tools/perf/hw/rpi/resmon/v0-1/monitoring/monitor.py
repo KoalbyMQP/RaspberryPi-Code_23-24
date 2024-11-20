@@ -96,11 +96,18 @@ class Monitor:
         try:
             env = dict(subprocess.os.environ)
             depthai_path = self.settings.get('depthai_path')
+            venv_path = self.settings.get('venv_path')
             
-            venv_activate = str(Path(depthai_path).parent.parent / 'bin' / 'activate')
+            self.settings.validate_paths()
+            
+            venv_activate = str(venv_path / 'bin' / 'activate')
             activate_cmd = f'source {venv_activate} && '
             
             cmd = f"{activate_cmd} cd {depthai_path} && python3 depthai_demo.py"
+            
+            Logger.logger.info(f"Starting DepthAI from: {depthai_path}")
+            Logger.logger.info(f"Using virtual environment: {venv_path}")
+            
             self.depthai_process = subprocess.Popen(
                 cmd,
                 shell=True,
@@ -109,12 +116,12 @@ class Monitor:
             )
         except Exception as e:
             Logger.logger.error(f"Failed to start DepthAI: {str(e)}")
-            self.should_stop = True
+            raise
     
     def run(self, pre_duration: int = 30, post_duration: int = 30, output_dir: Optional[str] = None):
         start_time = time.time()
         
-        # Setup logging directory
+        # Setup logging directory 
         timestamp = datetime.now().strftime('%m%d%Y_%H%M%S')
         log_dir = Path(output_dir) if output_dir else Path.cwd() / f'logs_{timestamp}'
         for subdir in ['prerun', 'runtime', 'postrun', 'summary']:
