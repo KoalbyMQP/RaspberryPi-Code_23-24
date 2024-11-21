@@ -1,5 +1,4 @@
 import psutil
-import subprocess
 from typing import Dict, Any
 
 class SystemCollector:
@@ -7,11 +6,6 @@ class SystemCollector:
     def collect() -> Dict[str, Any]:
         disk = psutil.disk_io_counters()
         net = psutil.net_io_counters()
-        
-        try:
-            decoder = subprocess.check_output(['vcgencmd', 'codec_enabled', 'H264']).decode()
-        except:
-            decoder = "unavailable"
     
         return {
             'disk_read': disk.read_bytes,
@@ -20,5 +14,4 @@ class SystemCollector:
             'net_recv': net.bytes_recv,
             'process_count': len(psutil.pids()),
             'context_switches': psutil.cpu_stats().ctx_switches,
-            'hw_decoder': decoder.strip(),
         }
