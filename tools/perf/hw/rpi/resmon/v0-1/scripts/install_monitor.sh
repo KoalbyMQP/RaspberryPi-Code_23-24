@@ -8,14 +8,69 @@ PROJECT_ROOT="$(dirname "$(dirname "$(dirname "$(dirname "$(dirname "$(dirname "
 cd ~/vdepthai || exit 1
 source bin/activate || exit 1
 
+check_python_package() {
+    python3 -c "import $1" &>/dev/null
+    return $?
+}
+
+check_system_package() {
+    dpkg -l "$1" &>/dev/null
+    return $?
+}
+
 # Install Python dependencies
-pip install psutil pandas matplotlib click pyyaml jinja2
+PYTHON_PACKAGES=("psutil" "pandas" "matplotlib" "click" "pyyaml" "jinja2")
+for package in "${PYTHON_PACKAGES[@]}"; do
+    if check_python_package "$package"; then
+        echo "✓ $package already installed"
+    else
+        echo "Installing $package..."
+        pip install "$package"
+        if [ $? -eq 0 ]; then
+            echo "✓ Successfully installed $package"
+        else
+            echo "✗ Failed to install $package"
+            exit 1
+        fi
+    fi
+done
 
 # Install LaTeX dependencies
-sudo apt-get update
-sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended
+LATEX_PACKAGES=("texlive-latex-base" "texlive-latex-extra" "texlive-fonts-recommended")
+NEED_APT_UPDATE=false
 
-# Create desktop shortcut 
+for package in "${LATEX_PACKAGES[@]}"; do
+    if check_system_package "$package"; then
+        echo "✓ $package already installed"
+    else
+        NEED_APT_UPDATE=true
+        break
+    fi
+done
+
+if [ "$NEED_APT_UPDATE" = true ]; then
+    echo "Updating package lists..."
+    sudo apt-get update
+    if [ $? -ne 0 ]; then
+        echo "✗ Failed to update package lists"
+        exit 1
+    fi
+
+    for package in "${LATEX_PACKAGES[@]}"; do
+        if ! check_system_package "$package"; then
+            echo "Installing $package..."
+            sudo apt-get install -y "$package"
+            if [ $? -eq 0 ]; then
+                echo "✓ Successfully installed $package"
+            else
+                echo "✗ Failed to install $package"
+                exit 1
+            fi
+        fi
+    done
+fi
+
+# Create desktop shortcut
 cat > ~/Desktop/depthai-monitor.desktop << EOL
 [Desktop Entry]
 Name=DepthAI Monitor
@@ -30,3 +85,5 @@ chmod +x ~/Desktop/depthai-monitor.desktop
 
 # Deactivate virtual environment
 deactivate
+
+echo "✓ Installation completed successfully"
