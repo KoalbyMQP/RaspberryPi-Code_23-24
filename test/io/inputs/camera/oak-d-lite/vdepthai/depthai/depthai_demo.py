@@ -1,4 +1,72 @@
 #!/usr/bin/env python3
+"""
+DepthAI Demo Application
+=======================
+
+1. Pipeline Management
+   - Camera configuration
+   - Neural network setup
+   - Depth configuration
+   - Stream synchronization
+
+2. Visualization
+   - OpenCV-based preview
+   - Qt-based GUI interface
+   - Neural network results
+   - Depth visualization
+
+3. Neural Networks
+   - Multiple model support
+   - Real-time inference
+   - Result visualization
+   - Model management
+
+Usage Examples:
+--------------
+1. Basic RGB preview with neural network:
+   python3 depthai_demo.py -gt cv
+
+2. Neural network on video:
+   python3 depthai_demo.py -gt cv -vid path/to/video
+
+3. Specific model inference:
+   python3 depthai_demo.py -gt cv -cnn person-detection-retail-0013
+
+Command Line Arguments:
+---------------------
+-gt, --guiType        GUI type (cv, qt, none)
+-vid, --video         Path to video file
+-cnn                  Neural network model to use
+-dd, --disableDepth   Disable depth perception
+-dnn                  Disable neural network
+-sync                 Enable frame synchronization
+...
+
+Architecture Overview:
+--------------------
+1. Device Initialization
+   └─ Pipeline Creation
+      ├─ Camera Setup (RGB/Mono)
+      ├─ Neural Network Setup
+      └─ Depth Setup
+
+2. Data Flow
+   RGB/Mono Cameras -> Pre-processing -> Neural Network -> Post-processing -> Visualization
+                   \-> Depth Calculation -> Visualization
+
+3. Components Interaction
+   Demo Class -> Pipeline Manager -> Neural Network Manager
+              -> Preview Manager  -> Encoding Manager
+
+Requirements:
+------------
+- Python 3.6+
+- OpenCV 4.5+
+- DepthAI SDK
+- Qt5 (for GUI interface)
+"""
+
+# Import system packages
 import atexit
 import signal
 import sys
@@ -113,6 +181,31 @@ noop = lambda *a, **k: None
 
 
 class Demo:
+    """
+    Main Demo class that handles the DepthAI pipeline and all its components.
+
+    This class is responsible for:
+    1. Setting up the DepthAI pipeline
+    2. Managing camera configurations
+    3. Handling neural network inference
+    4. Processing depth information
+    5. Visualizing results
+
+    Attributes:
+        _openvinoVersion: OpenVINO version for neural network inference
+        _displayFrames: Boolean to control frame display
+        _device: DepthAI device instance
+        _pm: Pipeline manager instance
+        _nnManager: Neural network manager instance
+        ...
+
+    Methods:
+        setup(): Initialize pipeline and components
+        run(): Main processing loop
+        stop(): Cleanup and close device
+        ...
+    """
+
     DISP_CONF_MIN = int(os.getenv("DISP_CONF_MIN", 0))
     DISP_CONF_MAX = int(os.getenv("DISP_CONF_MAX", 255))
     SIGMA_MIN = int(os.getenv("SIGMA_MIN", 0))
@@ -133,6 +226,20 @@ class Demo:
             self.run()
 
     def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, onAppSetup = noop, onAppStart = noop, shouldRun = lambda: True, showDownloadProgress=None):
+        """
+        Initialize Demo instance.
+
+        Args:
+            displayFrames (bool): Whether to display camera frames
+            onNewFrame (callable): Callback for new frames
+            onShowFrame (callable): Callback for frame display
+            onNn (callable): Callback for neural network results
+            onReport (callable): Callback for system reports
+            ...
+
+        Raises:
+            RuntimeError: If device initialization fails
+        """
         self._openvinoVersion = None
         self._displayFrames = displayFrames
 
@@ -173,6 +280,23 @@ class Demo:
             self.onAppStart = onAppStart
 
     def setup(self, conf: ConfigManager):
+        """
+        Set up the DepthAI pipeline and its components.
+
+        This method:
+        1. Initializes the device
+        2. Sets up neural networks if enabled
+        3. Configures cameras
+        4. Sets up depth perception
+        5. Initializes visualization
+
+        Args:
+            conf (ConfigManager): Configuration manager instance
+
+        Raises:
+            RuntimeError: If setup fails
+            ValueError: If configuration is invalid
+        """
         print("Setting up demo...")
         self._conf = conf
         
@@ -542,6 +666,36 @@ class Demo:
                          lambda value: self._device.setIrFloodLightBrightness(value))
 
     def _updateCameraConfigs(self, config):
+        """
+        Update camera configurations based on user settings.
+
+        This method handles:
+        1. Camera exposure settings
+        2. Sensitivity adjustments
+        3. Color corrections (saturation, contrast, brightness)
+        4. Image quality settings (sharpness)
+
+        The configuration is applied to:
+        - Left mono camera
+        - Right mono camera
+        - RGB camera
+
+        Args:
+            config (dict): Configuration dictionary with the following structure:
+                {
+                    "exposure": [(camera_name, value), ...],
+                    "sensitivity": [(camera_name, value), ...],
+                    "saturation": [(camera_name, value), ...],
+                    ...
+                }
+
+        Example:
+            config = {
+                "exposure": [("rgb", 500), ("mono", 300)],
+                "sensitivity": [("rgb", 800)]
+            }
+            _updateCameraConfigs(config)
+        """
         parsedConfig = {}
         for configOption, values in config.items():
             if values is not None:
