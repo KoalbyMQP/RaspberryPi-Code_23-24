@@ -63,7 +63,7 @@ class Monitor:
         analysis = []
         
         # CPU Analysis
-        cpu_load = runtime_df['cpu_percent_per_core'].mean()
+        cpu_load = runtime_df['cpu_percent'].mean()
         if cpu_load > 80:
             analysis.append("High CPU utilization detected")
         
