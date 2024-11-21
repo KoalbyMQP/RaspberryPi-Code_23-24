@@ -19,8 +19,9 @@ sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-rec
 cat > ~/Desktop/depthai-monitor.desktop << EOL
 [Desktop Entry]
 Name=DepthAI Monitor
-Exec=/home/finley/Desktop/RaspberryPi-Code_24-25/tools/perf/hw/rpi/resmon/v0-1/monitoring/run_monitor.sh
+Exec=lxterminal -e "cd ~/vdepthai && source bin/activate && /home/finley/Desktop/RaspberryPi-Code_24-25/tools/perf/hw/rpi/resmon/v0-1/monitoring/run_monitor.sh"
 Type=Application
+Terminal=true
 Categories=Development;
 EOL
 
