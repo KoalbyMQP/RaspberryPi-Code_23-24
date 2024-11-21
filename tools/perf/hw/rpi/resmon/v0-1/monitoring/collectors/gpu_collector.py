@@ -59,10 +59,6 @@ class GPUCollector:
             power_output = subprocess.check_output(['vcgencmd', 'get_throttled']).decode()
             pi5_metrics['power_state'] = int(power_output.split('=')[1], 16)
             
-            # Vulkan support
-            vulkan_output = subprocess.check_output(['vulkaninfo'], stderr=subprocess.DEVNULL).decode()
-            pi5_metrics['vulkan_version'] = '1.2' if 'Vulkan Instance Version: 1.2' in vulkan_output else 'N/A'
-            
         except:
             pass
         return pi5_metrics

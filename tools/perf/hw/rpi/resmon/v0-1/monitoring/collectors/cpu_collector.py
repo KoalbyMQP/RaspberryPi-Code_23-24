@@ -5,7 +5,7 @@ class CPUCollector:
     @staticmethod
     def collect() -> Dict[str, Any]:
         return {
-            'cpu_percent_per_core': psutil.cpu_percent(percpu=True),
+            'cpu_percent': psutil.cpu_percent(percpu=False),
             'cpu_freq': psutil.cpu_freq().current,
             'cpu_temp': CPUCollector._get_cpu_temp(),
             'load_avg': psutil.getloadavg()
