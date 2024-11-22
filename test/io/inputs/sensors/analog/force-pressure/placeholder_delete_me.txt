@@ -1,0 +1,1 @@
+Please place sample standalone RPi/HAT testing code for the analog pressure-force sensors here.

@@ -1,1 +1,1 @@
-Here code can be organized for standlone testing of the herkulex servos.
+Here code can be organized for standlone testing of the herkulex servos from the RPi, including e2e driver station agent testing.
