@@ -235,3 +235,5 @@ class Monitor:
             if self.depthai_process:
                 self.depthai_process.terminate()
 
+__all__ = ['Monitor']
+
