@@ -7,10 +7,6 @@ from datetime import datetime
 from typing import Optional, Dict, List
 import pandas as pd
 import os
-import sys
-import select
-import termios
-import tty
 
 from .collectors.cpu_collector import CPUCollector
 from .collectors.memory_collector import MemoryCollector
@@ -124,38 +120,18 @@ class Monitor:
                 raise FileNotFoundError(f"Virtual environment activation script not found at {venv_activate}")
             
             activate_cmd = f'source {venv_activate} && '
+            
             cmd = f"{activate_cmd} cd {depthai_path} && python3 depthai_demo.py"
             
             Logger.logger.info(f"Starting DepthAI from: {depthai_path}")
             Logger.logger.info(f"Using virtual environment: {venv_path}")
-            Logger.logger.info("Press 'q' to stop DepthAI demo")
             
             self.depthai_process = subprocess.Popen(
                 cmd,
                 shell=True,
-                executable='/bin/bash'
+                executable='/bin/bash',
+                preexec_fn=lambda: signal.signal(signal.SIGINT, signal.default_int_handler)
             )
-
-            def check_quit():
-                old_settings = termios.tcgetattr(sys.stdin)
-                try:
-                    tty.setraw(sys.stdin.fileno())
-                    
-                    while self.depthai_process.poll() is None:
-                        if select.select([sys.stdin], [], [], 0.1)[0]:
-                            key = sys.stdin.read(1)
-                            if key == 'q':
-                                Logger.logger.info("Received quit command ('q')")
-                                self.depthai_process.terminate()
-                                self.should_stop = True
-                                break
-                finally:
-                    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-
-            self.quit_monitor = threading.Thread(target=check_quit)
-            self.quit_monitor.daemon = True
-            self.quit_monitor.start()
-
         except Exception as e:
             Logger.logger.error(f"Failed to start DepthAI: {str(e)}")
             raise
@@ -230,10 +206,5 @@ class Monitor:
             Logger.logger.error(f"Error during monitoring: {str(e)}")
             self.should_stop = True
         finally:
-            if hasattr(self, 'quit_monitor'):
-                self.quit_monitor.join(timeout=1.0)
             if self.depthai_process:
                 self.depthai_process.terminate()
-
-__all__ = ['Monitor']
-
