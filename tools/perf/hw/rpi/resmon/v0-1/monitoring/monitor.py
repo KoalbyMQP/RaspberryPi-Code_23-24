@@ -25,15 +25,15 @@ class Monitor:
         self.depthai_process = None
         self.should_stop = False
         self.monitoring_thread = None
+        self._in_post_run = False
         signal.signal(signal.SIGINT, self._signal_handler)
         
     def _signal_handler(self, signum, frame):
-        if self.depthai_process:
-            self.depthai_process.terminate()
-            self.depthai_process.wait()
-        if not hasattr(self, '_in_post_run'):
+        if not self._in_post_run:
             self.should_stop = True
-    
+            if self.depthai_process:
+                self.depthai_process.terminate()
+
     def collect_metrics(self) -> dict:
         metrics = {}
         metrics.update(CPUCollector.collect())
@@ -83,17 +83,24 @@ class Monitor:
         start_time = time.time()
         while True:
             try:
+                if phase == "runtime" and self.depthai_process:
+                    if self.depthai_process.poll() is not None:
+                        Logger.logger.info("DepthAI process ended")
+                        self.should_stop = True
+                        break
+
                 metrics = self.collect_metrics()
                 csv_handler.write_row(metrics)
                 
                 if duration and (time.time() - start_time) >= duration:
                     break
-                if self.should_stop:
+                if self.should_stop and phase != "postrun":
                     break
                     
                 time.sleep(self.settings.get('sampling_interval'))
             except KeyboardInterrupt:
-                self.should_stop = True
+                if phase != "postrun":
+                    self.should_stop = True
                 break
             except Exception as e:
                 Logger.logger.error(f"Error in {phase} monitoring: {str(e)}")
@@ -120,7 +127,6 @@ class Monitor:
                 raise FileNotFoundError(f"Virtual environment activation script not found at {venv_activate}")
             
             activate_cmd = f'source {venv_activate} && '
-            
             cmd = f"{activate_cmd} cd {depthai_path} && python3 depthai_demo.py"
             
             Logger.logger.info(f"Starting DepthAI from: {depthai_path}")
@@ -130,7 +136,10 @@ class Monitor:
                 cmd,
                 shell=True,
                 executable='/bin/bash',
-                preexec_fn=lambda: signal.signal(signal.SIGINT, signal.default_int_handler)
+                preexec_fn=os.setsid,  
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
             )
         except Exception as e:
             Logger.logger.error(f"Failed to start DepthAI: {str(e)}")
@@ -139,7 +148,6 @@ class Monitor:
     def run(self, pre_duration: int = 30, post_duration: int = 30, output_dir: Optional[str] = None):
         start_time = time.time()
         
-        # Setup logging directory 
         timestamp = datetime.now().strftime('%m%d%Y_%H%M%S')
         log_dir = Path(output_dir) if output_dir else Path.cwd() / f'logs_{timestamp}'
         for subdir in ['prerun', 'runtime', 'postrun', 'summary']:
@@ -149,31 +157,36 @@ class Monitor:
         Logger.logger.info("Starting DepthAI monitoring session")
         
         try:
-            # Pre-run phase
             Logger.logger.info(f"Starting pre-run monitoring ({pre_duration}s)")
             prerun_csv = CSVHandler(log_dir / 'prerun' / 'metrics.csv')
             self.monitor_phase('prerun', pre_duration, prerun_csv)
 
-            # Runtime phase 
             Logger.logger.info("Starting DepthAI")
-            self.monitoring_thread = threading.Thread(target=self._start_depthai)
-            self.monitoring_thread.start()
+            self._start_depthai()
             
             Logger.logger.info("Starting runtime monitoring")
             runtime_csv = CSVHandler(log_dir / 'runtime' / 'metrics.csv')
             self.monitor_phase('runtime', None, runtime_csv)
 
-            # Post-run phase
+            
+            if self.depthai_process:
+                if self.depthai_process.poll() is None:
+                    self.depthai_process.terminate()
+                    try:
+                        self.depthai_process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        os.killpg(os.getpgid(self.depthai_process.pid), signal.SIGKILL)
+                self.depthai_process = None
+
             Logger.logger.info(f"Starting post-run monitoring ({post_duration}s)")
-            self._in_post_run = True  # Signal we're in post-run
+            self._in_post_run = True
+            self.should_stop = False  
             postrun_csv = CSVHandler(log_dir / 'postrun' / 'metrics.csv')
             self.monitor_phase('postrun', post_duration, postrun_csv)
-            del self._in_post_run
+            self._in_post_run = False
 
-            # Generate reports
             Logger.logger.info("Generating reports")
             
-            # Create plots
             Plotter.create_summary_plots(
                 log_dir / 'prerun' / 'metrics.csv',
                 log_dir / 'runtime' / 'metrics.csv',
@@ -181,14 +194,12 @@ class Monitor:
                 log_dir / 'summary'
             )
             
-            # Generate markdown reports
             md_handler = MarkdownHandler()
             for phase in ['prerun', 'runtime', 'postrun']:
                 csv_path = log_dir / phase / 'metrics.csv'
                 md_path = log_dir / phase / 'report.md'
                 md_handler.create_phase_report(csv_path, md_path)
             
-            # Generate PDF report
             latex_handler = LaTeXHandler()
             report_data = {
                 'date': datetime.now().strftime('%Y-%m-%d'),
@@ -206,5 +217,6 @@ class Monitor:
             Logger.logger.error(f"Error during monitoring: {str(e)}")
             self.should_stop = True
         finally:
-            if self.depthai_process:
-                self.depthai_process.terminate()
+            self._in_post_run = False
+            if self.depthai_process and self.depthai_process.poll() is None:
+                os.killpg(os.getpgid(self.depthai_process.pid), signal.SIGKILL)
