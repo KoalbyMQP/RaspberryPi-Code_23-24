@@ -1,7 +1,7 @@
 import click
 from pathlib import Path
 from datetime import datetime
-from monitoring.monitor import Monitor
+from .monitor import Monitor
 
 @click.command()
 @click.option('--pre', default=30, help='Pre-run duration in seconds')
