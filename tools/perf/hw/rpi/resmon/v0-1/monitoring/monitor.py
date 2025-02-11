@@ -7,10 +7,7 @@ from datetime import datetime
 from typing import Optional, Dict, List
 import pandas as pd
 import os
-import sys
-import select
-import termios
-import tty
+import cv2
 
 from .collectors.cpu_collector import CPUCollector
 from .collectors.memory_collector import MemoryCollector
@@ -124,7 +121,8 @@ class Monitor:
                 raise FileNotFoundError(f"Virtual environment activation script not found at {venv_activate}")
             
             activate_cmd = f'source {venv_activate} && '
-            cmd = f"{activate_cmd} cd {depthai_path} && python3 depthai_demo.py"
+            
+            cmd = f"{activate_cmd} cd {depthai_path} && python3 depthai_demo.py -gt cv"
             
             Logger.logger.info(f"Starting DepthAI from: {depthai_path}")
             Logger.logger.info(f"Using virtual environment: {venv_path}")
@@ -137,20 +135,13 @@ class Monitor:
             )
 
             def check_quit():
-                old_settings = termios.tcgetattr(sys.stdin)
-                try:
-                    tty.setraw(sys.stdin.fileno())
-                    
-                    while self.depthai_process.poll() is None:
-                        if select.select([sys.stdin], [], [], 0.1)[0]:
-                            key = sys.stdin.read(1)
-                            if key == 'q':
-                                Logger.logger.info("Received quit command ('q')")
-                                self.depthai_process.terminate()
-                                self.should_stop = True
-                                break
-                finally:
-                    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+                while self.depthai_process.poll() is None:
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        Logger.logger.info("Received quit command ('q')")
+                        self.depthai_process.terminate()
+                        self.should_stop = True
+                        break
+                    time.sleep(0.1)
 
             self.quit_monitor = threading.Thread(target=check_quit)
             self.quit_monitor.daemon = True
@@ -234,4 +225,3 @@ class Monitor:
                 self.quit_monitor.join(timeout=1.0)
             if self.depthai_process:
                 self.depthai_process.terminate()
-
