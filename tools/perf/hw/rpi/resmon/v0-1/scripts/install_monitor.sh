@@ -74,11 +74,10 @@ fi
 cat > ~/Desktop/depthai-monitor.desktop << EOL
 [Desktop Entry]
 Name=DepthAI Monitor
-Exec=bash -c 'lxterminal --working-directory=/home/finley/Documents/GitHub/RaspberryPi-Code_24-25/test/io/inputs/camera/oak-d-lite/vdepthai -e "bash -c \"source bin/activate && cd /home/finley/Documents/GitHub/RaspberryPi-Code_24-25/tools/perf/hw/rpi/resmon/v0-1/monitoring/ && chmod +x run_monitor.sh && ./run_monitor.sh; exec bash\""'
+Exec=lxterminal -e "cd ~/vdepthai && source bin/activate && /home/finley/Desktop/RaspberryPi-Code_24-25/tools/perf/hw/rpi/resmon/v0-1/monitoring/run_monitor.sh"
 Type=Application
-Terminal=false
+Terminal=true
 Categories=Development;
-Icon=utilities-terminal
 EOL
 
 # Make the desktop entry executable
