@@ -1,4 +1,3 @@
-from logging import Logger
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -46,11 +45,6 @@ class Plotter:
                 'ylabel': 'Bytes'
             }
         }
-        
-        for phase_df in ['prerun_df', 'runtime_df', 'postrun_df']:
-            if len(phase_df) == 0:
-                Logger.logger.warning(f"No data found for {phase_df} phase")
-                continue
         
         for metric_name, config in metrics.items():
             try:
