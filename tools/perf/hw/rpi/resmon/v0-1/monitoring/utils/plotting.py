@@ -36,7 +36,7 @@ class Plotter:
                 'ylabel': 'Usage (%)'
             },
             'CPU Metrics': {
-                'columns': ['cpu_percent'],
+                'columns': ['cpu_percent_per_core'],
                 'title': 'CPU Usage Over Time',
                 'ylabel': 'Usage (%)'
             },
