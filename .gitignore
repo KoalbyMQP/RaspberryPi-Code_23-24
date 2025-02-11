@@ -2,5 +2,5 @@
 **/venv
 **/.vscode
 **/__pycache__
-/test/io/inputs/camera/oak-d-lite/vdepthai
+/test/io/inputs/camera/oak-d-lite/vdepthai/bin
 
