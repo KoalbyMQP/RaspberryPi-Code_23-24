@@ -28,11 +28,9 @@ class Monitor:
         signal.signal(signal.SIGINT, self._signal_handler)
         
     def _signal_handler(self, signum, frame):
+        self.should_stop = True
         if self.depthai_process:
             self.depthai_process.terminate()
-            self.depthai_process.wait()
-        if not hasattr(self, '_in_post_run'):
-            self.should_stop = True
     
     def collect_metrics(self) -> dict:
         metrics = {}
@@ -149,27 +147,26 @@ class Monitor:
         Logger.logger.info("Starting DepthAI monitoring session")
         
         try:
-            # Pre-run phase
+            # Pre-run monitoring
             Logger.logger.info(f"Starting pre-run monitoring ({pre_duration}s)")
             prerun_csv = CSVHandler(log_dir / 'prerun' / 'metrics.csv')
             self.monitor_phase('prerun', pre_duration, prerun_csv)
-
-            # Runtime phase 
+            
+            # Start DepthAI 
             Logger.logger.info("Starting DepthAI")
             self.monitoring_thread = threading.Thread(target=self._start_depthai)
             self.monitoring_thread.start()
             
+            # Runtime monitoring
             Logger.logger.info("Starting runtime monitoring")
             runtime_csv = CSVHandler(log_dir / 'runtime' / 'metrics.csv')
             self.monitor_phase('runtime', None, runtime_csv)
-
-            # Post-run phase
+            
+            # Post-run monitoring
             Logger.logger.info(f"Starting post-run monitoring ({post_duration}s)")
-            self._in_post_run = True  # Signal we're in post-run
             postrun_csv = CSVHandler(log_dir / 'postrun' / 'metrics.csv')
             self.monitor_phase('postrun', post_duration, postrun_csv)
-            del self._in_post_run
-
+            
             # Generate reports
             Logger.logger.info("Generating reports")
             
